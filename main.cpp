@@ -1,12 +1,11 @@
 #include <exception>
 #include <iostream>
-#include <ostream>
 
-#include "engine.h"
+#include "engine/engine.h"
 
 int main() {
     try {
-        const Engine engine = EngineLoader::createEngine();
+        const Engine engine = Engine::createEngine();
         engine.waitEventsUntilExit();
     } catch (std::exception& ex) {
         std::cerr << ex.what() << std::endl;

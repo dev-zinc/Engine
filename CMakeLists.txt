@@ -41,9 +41,15 @@ else ()
 endif ()
 
 add_executable(Engine main.cpp
-        platform.h
-        engine.h
-        engine.cpp)
+        utils/platform.h
+        engine/engine.h
+        engine/engine.cpp
+        utils/validations.h
+        utils/validations.cpp
+        engine/engine_component_factory.cpp
+        engine/engine_component_factory.h
+        engine/queue/queue_factory.cpp
+        engine/queue/queue_factory.h)
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
 
