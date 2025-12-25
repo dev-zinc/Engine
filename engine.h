@@ -16,13 +16,14 @@ namespace EngineLoader {
 class Engine {
 public:
     Engine(GLFWwindow *m_window, VkInstance m_instance)
-        : m_window(m_window),
-          m_instance(m_instance) {};
+            : m_window(m_window), m_instance(m_instance) {};
 
     ~Engine();
 
+    [[nodiscard]]
     GLFWwindow* getWindow() const;
 
+    [[nodiscard]]
     VkInstance getInstance() const;
 
     void waitEventsUntilExit() const;

@@ -26,7 +26,7 @@ GLFWwindow* EngineLoader::createWindow() {
 
     GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan!", nullptr, nullptr);
 
-    if (!window) {
+    if (window) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
