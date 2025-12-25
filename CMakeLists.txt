@@ -41,7 +41,9 @@ else ()
 endif ()
 
 add_executable(Engine main.cpp
-        platform.h)
+        platform.h
+        Engine.h
+        engine.cpp)
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
 
