@@ -4,13 +4,22 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-void Engine::checkGlfwInit() {
+Engine EngineLoader::createEngine() {
+    checkGlfwInit();
+    GLFWwindow* window = createWindow();
+    checkVkExtensions();
+    VkInstance instance = createVkInstance();
+
+    return { window, instance };
+}
+
+void EngineLoader::checkGlfwInit() {
     if (!glfwInit()) {
         throw std::runtime_error("Failed to initialize GLFW");
     }
 }
 
-GLFWwindow* Engine::createWindow() {
+GLFWwindow* EngineLoader::createWindow() {
     // OpenGL 컨텍스트 생성 방지 (Vulkan 사용 시 필수)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -24,7 +33,7 @@ GLFWwindow* Engine::createWindow() {
     return window;
 }
 
-void Engine::checkVkExtensions() {
+void EngineLoader::checkVkExtensions() {
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
     std::cout << "Vulkan extensions supported: " << extensionCount << std::endl;
@@ -53,7 +62,7 @@ void createVkInstanceCreateInfo(VkInstanceCreateInfo& createInfo, std::vector<co
     createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 }
 
-VkInstance Engine::createVkInstance() {
+VkInstance EngineLoader::createVkInstance() {
     VkApplicationInfo appInfo {};
     createApplicationInfo(appInfo);
 
@@ -74,14 +83,23 @@ VkInstance Engine::createVkInstance() {
     return instance;
 }
 
-void Engine::waitEventsUntilExit(GLFWwindow* window) {
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-    }
+
+Engine::~Engine() {
+    vkDestroyInstance(m_instance, nullptr);
+    glfwDestroyWindow(m_window);
+    glfwTerminate();
 }
 
-void Engine::destroy(GLFWwindow* window, VkInstance instance) {
-      vkDestroyInstance(instance, nullptr);
-      glfwDestroyWindow(window);
-      glfwTerminate();
+GLFWwindow* Engine::getWindow() const {
+    return m_window;
+}
+
+VkInstance Engine::getInstance() const {
+    return m_instance;
+}
+
+void Engine::waitEventsUntilExit() const {
+    while (!glfwWindowShouldClose(m_window)) {
+        glfwPollEvents();
+    }
 }

@@ -42,7 +42,7 @@ endif ()
 
 add_executable(Engine main.cpp
         platform.h
-        Engine.h
+        engine.h
         engine.cpp)
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
