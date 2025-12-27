@@ -49,7 +49,10 @@ add_executable(Engine main.cpp
         engine/engine_component_factory.cpp
         engine/engine_component_factory.h
         engine/queue/queue_factory.cpp
-        engine/queue/queue_factory.h)
+        engine/queue/queue_factory.h
+        engine/swapchain/swapchain_supports.cpp
+        engine/swapchain/swapchain_supports.h
+        utils/classic_string.h)
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
 

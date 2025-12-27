@@ -1,7 +1,7 @@
 #pragma once
 
-#include <optional>
-#include <set>
+#include <utility>
+#include <vector>
 #include <GLFW/glfw3.h>
 
 namespace EngineLoader {
@@ -11,7 +11,6 @@ namespace EngineLoader {
     void checkValidationLayerSupport();
 
     void checkVkExtensions();
-
 }
 
 class Engine {
@@ -39,8 +38,20 @@ public:
         return m_surface;
     }
 
-    Engine(GLFWwindow *window, VkInstance instance, VkDevice device, VkSurfaceKHR surface)
-        : m_window(window), m_instance(instance), m_device(device), m_surface(surface) {
+    Engine(
+        GLFWwindow *window,
+        VkInstance instance,
+        VkDevice device,
+        VkSurfaceKHR surface,
+        VkSwapchainKHR swapchain,
+        std::vector<VkImageView> imageViews
+    ) {
+        m_window = window;
+        m_instance = instance;
+        m_device = device;
+        m_surface = surface;
+        m_swapchain = swapchain;
+        m_imageViews = std::move(imageViews);
     };
 
     ~Engine();
@@ -52,4 +63,6 @@ private:
     VkInstance m_instance;
     VkDevice m_device;
     VkSurfaceKHR m_surface;
+    VkSwapchainKHR m_swapchain;
+    std::vector<VkImageView> m_imageViews;
 };

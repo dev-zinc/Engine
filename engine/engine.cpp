@@ -7,7 +7,6 @@
 #include "../utils/validations.h"
 #include "queue/queue_factory.h"
 
-
 Engine Engine::createEngine() {
     EngineLoader::checkGlfwInit();
 
@@ -22,11 +21,25 @@ Engine Engine::createEngine() {
     std::vector physicalDevices = EngineComponentFactory::getPhysicalDevices(instance);
     VkPhysicalDevice physicalDevice = EngineComponentFactory::getProperPhysicalDevice(physicalDevices, surface);
 
-    float queuePriority = 1.0f;
-    std::vector queueCreateInfoList = QueueFactory::createQueueCreateInfoList(physicalDevice, surface, &queuePriority);
-    VkDevice device = EngineComponentFactory::createDevice(physicalDevice, queueCreateInfoList);
+    constexpr float queuePriority = 1.0f;
+    std::vector queueCreateInfos = QueueFactory::createQueueCreateInfos(physicalDevice, surface, &queuePriority);
+    VkDevice device = EngineComponentFactory::createDevice(physicalDevice, queueCreateInfos);
 
-    return { window, instance, device, surface };
+    SwapchainSupportDetails swapchainSupportDetails = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
+    VkSwapchainKHR swapchain = EngineComponentFactory::createSwapchain(device, surface, swapchainSupportDetails, queueCreateInfos.size() == 1);
+
+    std::vector<VkImage> images = EngineComponentFactory::getSwapchainImages(device, swapchain);
+    std::vector<VkImageView> imageViews {};
+
+    for (
+        VkFormat format = swapchainSupportDetails.getProperSurfaceFormat().format;
+        VkImage image : images
+    ) {
+        VkImageView imageView = EngineComponentFactory::createImageView(device, format, image);
+        imageViews.push_back(imageView);
+    }
+
+    return { window, instance, device, surface, swapchain, imageViews };
 }
 
 
@@ -66,6 +79,10 @@ void EngineLoader::checkVkExtensions() {
 
 
 Engine::~Engine() {
+    for (auto imageView : m_imageViews) {
+        vkDestroyImageView(m_device, imageView, nullptr);
+    }
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyInstance(m_instance, nullptr);

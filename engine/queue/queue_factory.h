@@ -30,16 +30,16 @@ struct QueueFamilyIndices {
 
 namespace QueueFactory {
 
-    std::vector<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice& physicalDevice);
+    std::vector<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice physicalDevice);
 
     // Device의 Queue Family 위치를 가져옴 (graphics index, presentation index)
-    QueueFamilyIndices getQueueFamilyIndices(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface);
+    QueueFamilyIndices getQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
     VkDeviceQueueCreateInfo createDeviceQueueCreateInfo(const float* queuePriority, uint32_t queueFamilyIndex);
 
-    std::vector<VkDeviceQueueCreateInfo> createQueueCreateInfoList(
-        VkPhysicalDevice& physicalDevice,
-        VkSurfaceKHR& surface,
+    std::vector<VkDeviceQueueCreateInfo> createQueueCreateInfos(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR surface,
         const float* queuePriority
     );
 }

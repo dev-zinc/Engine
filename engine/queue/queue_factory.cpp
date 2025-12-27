@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 
-std::vector<VkQueueFamilyProperties> QueueFactory::getQueueFamilyProperties(VkPhysicalDevice& physicalDevice) {
+std::vector<VkQueueFamilyProperties> QueueFactory::getQueueFamilyProperties(VkPhysicalDevice physicalDevice) {
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
@@ -18,13 +18,13 @@ VkBool32 supportsGraphics(const VkQueueFamilyProperties& queueFamilyProperties) 
     return queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT;
 }
 
-VkBool32 supportsPresentation(VkPhysicalDevice& physicalDevice, int index, VkSurfaceKHR& surface) {
+VkBool32 supportsPresentation(VkPhysicalDevice physicalDevice, int index, VkSurfaceKHR surface) {
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &presentSupport);
     return presentSupport;
 }
 
-QueueFamilyIndices QueueFactory::getQueueFamilyIndices(VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface) {
+QueueFamilyIndices QueueFactory::getQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
     QueueFamilyIndices queueFamilyIndices {};
     std::vector<VkQueueFamilyProperties> queueFamilyPropertiesList = getQueueFamilyProperties(physicalDevice);
 
@@ -53,9 +53,9 @@ VkDeviceQueueCreateInfo QueueFactory::createDeviceQueueCreateInfo(const float* q
     return queueCreateInfo;
 }
 
-std::vector<VkDeviceQueueCreateInfo> QueueFactory::createQueueCreateInfoList(
-    VkPhysicalDevice& physicalDevice,
-    VkSurfaceKHR& surface,
+std::vector<VkDeviceQueueCreateInfo> QueueFactory::createQueueCreateInfos(
+    VkPhysicalDevice physicalDevice,
+    VkSurfaceKHR surface,
     const float* queuePriority
 ) {
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfoList {};

@@ -1,7 +1,11 @@
 #pragma once
 
+#include <set>
 #include <vector>
 #include <GLFW/glfw3.h>
+
+#include "../utils/classic_string.h"
+#include "swapchain/swapchain_supports.h"
 
 namespace EngineComponentFactory {
 
@@ -11,36 +15,51 @@ namespace EngineComponentFactory {
 
     // Create Instance
 
-    std::vector<const char*> getRequiredExtensions();
+    // Get
+    std::vector<ClassicString> getRequiredGlfwExtensions();
 
     VkApplicationInfo createApplicationInfo();
 
-    VkInstanceCreateInfo createVkInstanceCreateInfo(const VkApplicationInfo& appInfo, std::vector<const char*>& extensions);
+    VkInstanceCreateInfo createInstanceCreateInfo(VkApplicationInfo appInfo, std::vector<ClassicString>& extensions);
 
     VkInstance createVkInstance();
 
     // Create Surface
 
-    VkSurfaceKHR createSurface(VkInstance& instance, GLFWwindow* window);
+    VkSwapchainCreateInfoKHR createSwapchainCreateInfo(VkSurfaceKHR surface, SwapchainSupportDetails& swapchainInfo, bool useSameQueueFamily);
+
+    VkSwapchainKHR createSwapchain(VkDevice device, VkSurfaceKHR surface, SwapchainSupportDetails& swapchainInfo, bool useSameQueueFamily);
+
+    // Get
+    std::vector<VkImage> getSwapchainImages(VkDevice device, VkSwapchainKHR swapchain);
+
+    VkImageViewCreateInfo createImageViewCreateInfo(VkFormat format, VkImage image);
+
+    VkImageView createImageView(VkDevice device, VkFormat format, VkImage image);
+
+    VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow* window);
 
     // Create Device
 
-    std::vector<VkPhysicalDevice> getPhysicalDevices(VkInstance& instance);
+    // Get
+    std::vector<VkPhysicalDevice> getPhysicalDevices(VkInstance instance);
 
-    VkPhysicalDevice getProperPhysicalDevice(std::vector<VkPhysicalDevice>& physicalDevices, VkSurfaceKHR& surface);
+    // Resolve
+    VkPhysicalDevice getProperPhysicalDevice(std::vector<VkPhysicalDevice>& physicalDevices, VkSurfaceKHR surface);
 
     VkPhysicalDeviceFeatures createPhysicalDeviceFeatures();
 
-    std::vector<const char*> getDeviceExtensions();
+    // Get
+    std::vector<ClassicString> getDeviceExtensions();
 
     VkDeviceCreateInfo createDeviceCreateInfo(
         const std::vector<VkDeviceQueueCreateInfo>& queueCreateInfoList,
-        const VkPhysicalDeviceFeatures& physicalDeviceFeatures,
-        const std::vector<const char*>& deviceExtensions
+        VkPhysicalDeviceFeatures physicalDeviceFeatures,
+        const std::vector<ClassicString>& deviceExtensions
     );
 
     VkDevice createDevice(
-        VkPhysicalDevice& physicalDevice,
+        VkPhysicalDevice physicalDevice,
         std::vector<VkDeviceQueueCreateInfo>& queueCreateInfoList
     );
 }
