@@ -1,11 +1,9 @@
 #include "validations.h"
 
-#include "classic_string.h"
-
-bool Validations::isAvailable(const std::vector<VkLayerProperties>& availableLayers, ClassicString layerName) {
+bool Validations::isAvailable(const std::vector<VkLayerProperties>& availableLayers, const char* layerName) {
     return std::ranges::any_of(
         availableLayers,
-        [&](ClassicString name) {
+        [&](const char* name) {
             return strcmp(name, layerName) == 0;
         },
         &VkLayerProperties::layerName

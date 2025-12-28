@@ -2,17 +2,19 @@
 
 #include <set>
 
-#include "../utils/platform.h"
-#include "../utils/validations.h"
+#include "util/platform.h"
+#include "util/validations.h"
 #include "queue/queue_factory.h"
+#include "shader/shaders.h"
 #include "swapchain/swapchain_supports.h"
+#include "util/binary_file_utils.h"
 
-GLFWwindow* EngineComponentFactory::createWindow() {
+GLFWwindow *EngineComponentFactory::createWindow() {
     // OpenGL 컨텍스트 생성 방지 (Vulkan 사용 시 필수)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan!", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(800, 600, "Vulkan!", nullptr, nullptr);
 
     if (!window) {
         glfwTerminate();
@@ -22,7 +24,7 @@ GLFWwindow* EngineComponentFactory::createWindow() {
 }
 
 VkApplicationInfo EngineComponentFactory::createApplicationInfo() {
-    VkApplicationInfo appInfo {};
+    VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Hello Triangle";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -32,14 +34,14 @@ VkApplicationInfo EngineComponentFactory::createApplicationInfo() {
     return appInfo;
 }
 
-std::vector<ClassicString> EngineComponentFactory::getRequiredGlfwExtensions() {
+std::vector<const char*> EngineComponentFactory::getRequiredGlfwExtensions() {
     uint32_t glfwExtensionCount = 0;
-    ClassicString* glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     return { glfwExtensions, glfwExtensions + glfwExtensionCount };
 }
 
-VkInstanceCreateInfo EngineComponentFactory::createInstanceCreateInfo(VkApplicationInfo appInfo, std::vector<ClassicString>& extensions) {
-    VkInstanceCreateInfo createInfo {};
+VkInstanceCreateInfo EngineComponentFactory::createInstanceCreateInfo(VkApplicationInfo appInfo, std::vector<const char*> &extensions) {
+    VkInstanceCreateInfo createInfo{};
 
     // Mac(MoltenVK) 호환성을 위해 필요한 확장 설정
     if constexpr (Platform::isMac) {
@@ -84,7 +86,7 @@ VkSwapchainCreateInfoKHR EngineComponentFactory::createSwapchainCreateInfo(
     SwapchainSupportDetails& swapchainInfo,
     bool useSameQueueFamily
 ) {
-    VkSwapchainCreateInfoKHR swapchainCreateInfo {};
+    VkSwapchainCreateInfoKHR swapchainCreateInfo{};
     VkSurfaceCapabilitiesKHR capabilities = swapchainInfo.surfaceCapabilities;
     VkSurfaceFormatKHR surfaceFormat = swapchainInfo.getProperSurfaceFormat();
     VkPresentModeKHR presentMode = swapchainInfo.getProperPresentMode();
@@ -114,7 +116,7 @@ VkSwapchainCreateInfoKHR EngineComponentFactory::createSwapchainCreateInfo(
 VkSwapchainKHR EngineComponentFactory::createSwapchain(
     VkDevice device,
     VkSurfaceKHR surface,
-    SwapchainSupportDetails& swapchainInfo,
+    SwapchainSupportDetails &swapchainInfo,
     bool useSameQueueFamily
 ) {
     VkSwapchainCreateInfoKHR swapchainCreateInfo = createSwapchainCreateInfo(surface, swapchainInfo, useSameQueueFamily);
@@ -145,7 +147,10 @@ VkImageViewCreateInfo EngineComponentFactory::createImageViewCreateInfo(VkFormat
     imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     imageViewCreateInfo.format = format;
 
-    imageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+    imageViewCreateInfo.components = {
+        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+    };
 
     imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
@@ -167,7 +172,7 @@ VkImageView EngineComponentFactory::createImageView(VkDevice device, VkFormat fo
     return imageView;
 }
 
-VkSurfaceKHR EngineComponentFactory::createSurface(VkInstance instance, GLFWwindow* window) {
+VkSurfaceKHR EngineComponentFactory::createSurface(VkInstance instance, GLFWwindow *window) {
     VkSurfaceKHR surface;
 
     if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
@@ -177,7 +182,7 @@ VkSurfaceKHR EngineComponentFactory::createSurface(VkInstance instance, GLFWwind
 }
 
 std::vector<VkPhysicalDevice> EngineComponentFactory::getPhysicalDevices(VkInstance instance) {
-    uint32_t physicalDeviceCount {};
+    uint32_t physicalDeviceCount{};
     vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
 
     std::vector<VkPhysicalDevice> physicalDevices(physicalDeviceCount);
@@ -187,20 +192,23 @@ std::vector<VkPhysicalDevice> EngineComponentFactory::getPhysicalDevices(VkInsta
 }
 
 VkPhysicalDevice EngineComponentFactory::getProperPhysicalDevice(std::vector<VkPhysicalDevice>& physicalDevices, VkSurfaceKHR surface) {
-    for (auto& physicalDevice : physicalDevices) {
+    for (auto &physicalDevice : physicalDevices) {
         if (!SwapchainSupports::supportsSwapchain(physicalDevice)) {
             continue;
         }
 
         if (
-            const auto& [capabilities, surfaceFormats, presentModes] = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
+            const auto &[capabilities, surfaceFormats, presentModes] = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
             presentModes.empty() || surfaceFormats.empty()
         ) {
             continue;
         }
-        QueueFamilyIndices queueFamilyIndices = QueueFactory::getQueueFamilyIndices(physicalDevice, surface);
 
-        if (queueFamilyIndices.isComplete()) {
+
+        if (
+            QueueFamilyIndices queueFamilyIndices = QueueFactory::getQueueFamilyIndices(physicalDevice, surface);
+            queueFamilyIndices.isComplete()
+        ) {
             return physicalDevice;
         }
     }
@@ -209,15 +217,13 @@ VkPhysicalDevice EngineComponentFactory::getProperPhysicalDevice(std::vector<VkP
 }
 
 VkPhysicalDeviceFeatures EngineComponentFactory::createPhysicalDeviceFeatures() {
-    VkPhysicalDeviceFeatures physicalDeviceFeatures {};
-    // physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
-    return physicalDeviceFeatures;
+  VkPhysicalDeviceFeatures physicalDeviceFeatures{};
+  // physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
+  return physicalDeviceFeatures;
 }
 
-std::vector<ClassicString> EngineComponentFactory::getDeviceExtensions() {
-    std::vector<ClassicString> deviceExtensions {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+std::vector<const char*> EngineComponentFactory::getDeviceExtensions() {
+    std::vector deviceExtensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     if constexpr (Platform::isMac) {
         deviceExtensions.push_back("VK_KHR_portability_subset");
@@ -228,9 +234,9 @@ std::vector<ClassicString> EngineComponentFactory::getDeviceExtensions() {
 VkDeviceCreateInfo EngineComponentFactory::createDeviceCreateInfo(
     const std::vector<VkDeviceQueueCreateInfo>& queueCreateInfoList,
     VkPhysicalDeviceFeatures physicalDeviceFeatures,
-    const std::vector<ClassicString>& deviceExtensions
+    const std::vector<const char*>& deviceExtensions
 ) {
-    VkDeviceCreateInfo deviceCreateInfo {};
+    VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
     deviceCreateInfo.queueCreateInfoCount = queueCreateInfoList.size();
@@ -240,7 +246,7 @@ VkDeviceCreateInfo EngineComponentFactory::createDeviceCreateInfo(
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if (Validations::isValidationLayersEnabled) {
+    if constexpr (Validations::isValidationLayersEnabled) {
         deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(Validations::LAYERS.size());
         deviceCreateInfo.ppEnabledLayerNames = Validations::LAYERS.data();
     } else {
@@ -262,4 +268,24 @@ VkDevice EngineComponentFactory::createDevice(VkPhysicalDevice physicalDevice, s
         throw std::runtime_error("Failed to create logical device!");
     }
     return device;
+}
+
+VkShaderModuleCreateInfo EngineComponentFactory::createShaderModuleCreateInfo(const BinaryFile& binary) {
+    VkShaderModuleCreateInfo createInfo {};
+
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = binary.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(binary.data());
+
+    return createInfo;
+}
+
+VkShaderModule EngineComponentFactory::createShaderModule(VkDevice device, const BinaryFile& binary) {
+    VkShaderModuleCreateInfo createInfo = createShaderModuleCreateInfo(binary);
+    VkShaderModule shaderModule;
+
+    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create shader module!");
+    }
+    return shaderModule;
 }

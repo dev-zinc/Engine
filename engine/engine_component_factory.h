@@ -4,8 +4,8 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 
-#include "../utils/classic_string.h"
 #include "swapchain/swapchain_supports.h"
+#include "util/binary_file_utils.h"
 
 namespace EngineComponentFactory {
 
@@ -16,11 +16,11 @@ namespace EngineComponentFactory {
     // Create Instance
 
     // Get
-    std::vector<ClassicString> getRequiredGlfwExtensions();
+    std::vector<const char*> getRequiredGlfwExtensions();
 
     VkApplicationInfo createApplicationInfo();
 
-    VkInstanceCreateInfo createInstanceCreateInfo(VkApplicationInfo appInfo, std::vector<ClassicString>& extensions);
+    VkInstanceCreateInfo createInstanceCreateInfo(VkApplicationInfo appInfo, std::vector<const char*>& extensions);
 
     VkInstance createVkInstance();
 
@@ -50,16 +50,22 @@ namespace EngineComponentFactory {
     VkPhysicalDeviceFeatures createPhysicalDeviceFeatures();
 
     // Get
-    std::vector<ClassicString> getDeviceExtensions();
+    std::vector<const char*> getDeviceExtensions();
 
     VkDeviceCreateInfo createDeviceCreateInfo(
         const std::vector<VkDeviceQueueCreateInfo>& queueCreateInfoList,
         VkPhysicalDeviceFeatures physicalDeviceFeatures,
-        const std::vector<ClassicString>& deviceExtensions
+        const std::vector<const char*>& deviceExtensions
     );
 
     VkDevice createDevice(
         VkPhysicalDevice physicalDevice,
         std::vector<VkDeviceQueueCreateInfo>& queueCreateInfoList
     );
+
+    // Create Shaders
+
+    VkShaderModuleCreateInfo createShaderModuleCreateInfo(const BinaryFile& binary);
+
+    VkShaderModule createShaderModule(VkDevice device, const BinaryFile& binary);
 }

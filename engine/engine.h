@@ -1,8 +1,13 @@
 #pragma once
 
+#include <map>
 #include <utility>
 #include <vector>
 #include <GLFW/glfw3.h>
+
+#include "shader/shaders.h"
+
+using ShaderMap = std::map<ShaderType, VkShaderModule>;
 
 namespace EngineLoader {
 
@@ -14,7 +19,6 @@ namespace EngineLoader {
 }
 
 class Engine {
-
 public:
     static Engine createEngine();
 
@@ -38,13 +42,24 @@ public:
         return m_surface;
     }
 
+    [[nodiscard]]
+    std::vector<VkImageView> getImageViews() const {
+        return m_imageViews;
+    }
+
+    [[nodiscard]]
+    ShaderMap getShaderModules() const {
+        return m_shaderModules;
+    }
+
     Engine(
         GLFWwindow *window,
         VkInstance instance,
         VkDevice device,
         VkSurfaceKHR surface,
         VkSwapchainKHR swapchain,
-        std::vector<VkImageView> imageViews
+        std::vector<VkImageView> imageViews,
+        ShaderMap shaderModules
     ) {
         m_window = window;
         m_instance = instance;
@@ -52,6 +67,7 @@ public:
         m_surface = surface;
         m_swapchain = swapchain;
         m_imageViews = std::move(imageViews);
+        m_shaderModules = std::move(shaderModules);
     };
 
     ~Engine();
@@ -65,4 +81,5 @@ private:
     VkSurfaceKHR m_surface;
     VkSwapchainKHR m_swapchain;
     std::vector<VkImageView> m_imageViews;
+    ShaderMap m_shaderModules;
 };

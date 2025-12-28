@@ -4,57 +4,23 @@ project(Engine)
 
 set(CMAKE_CXX_STANDARD 20)
 
-if (APPLE)
-    set(VULKAN_SDK_VERSION "1.4.335.1")
-    set(VULKAN_SDK_PATH "$ENV{HOME}/VulkanSDK/${VULKAN_SDK_VERSION}/macOS")
-    list(APPEND CMAKE_PREFIX_PATH "${VULKAN_SDK_PATH}")
-else ()
-    set(VULKAN_SDK_VERSION "1.4.335.0")
-    set(VULKAN_SDK_PATH "C:/VulkanSDK/${VULKAN_SDK_VERSION}")
-    list(APPEND CMAKE_PREFIX_PATH "${VULKAN_SDK_PATH}")
-endif ()
-
-find_package(Vulkan REQUIRED)
-
-if(APPLE)
-    find_package(glfw3 REQUIRED)
-    find_package(glm REQUIRED)
-else ()
-    include(FetchContent)
-
-    FetchContent_Declare(
-            glfw
-            GIT_REPOSITORY https://github.com/glfw/glfw
-            GIT_TAG        3.4
-    )
-    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-
-    FetchContent_Declare(
-            glm
-            GIT_REPOSITORY https://github.com/g-truc/glm
-            GIT_TAG        1.0.2
-    )
-    FetchContent_MakeAvailable(glfw glm)
-endif ()
+include(cmake/Dependencies.cmake)
 
 add_executable(Engine main.cpp
-        engine/utils/platform.h
+        engine/util/platform.h
         engine/engine.h
         engine/engine.cpp
-        engine/utils/validations.h
-        engine/utils/validations.cpp
+        engine/util/validations.h
+        engine/util/validations.cpp
         engine/engine_component_factory.cpp
         engine/engine_component_factory.h
         engine/queue/queue_factory.cpp
         engine/queue/queue_factory.h
         engine/swapchain/swapchain_supports.cpp
         engine/swapchain/swapchain_supports.h
-        engine/utils/classic_string.h
-        engine/utils/file_utils.cpp
-        engine/utils/file_utils.h
+        engine/util/binary_file_utils.cpp
+        engine/util/binary_file_utils.h
+        engine/shader/shaders.h
 )
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
@@ -65,3 +31,6 @@ target_link_libraries(Engine
         glfw
         glm::glm
 )
+
+include(cmake/CompileShaders.cmake)
+add_dependencies(Engine Shaders)

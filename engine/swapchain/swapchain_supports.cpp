@@ -1,8 +1,5 @@
 #include "swapchain_supports.h"
 
-#include "../../utils/classic_string.h"
-
-
 bool SwapchainSupports::supportsSwapchain(VkPhysicalDevice physicalDevice) {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
@@ -12,8 +9,8 @@ bool SwapchainSupports::supportsSwapchain(VkPhysicalDevice physicalDevice) {
 
     return std::ranges::any_of(
         availableExtensions,
-        [](ClassicString extensionName) {
-            return strcmp(extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) != 0;
+        [](std::string extensionName) {
+            return strcmp(extensionName.c_str(), VK_KHR_SWAPCHAIN_EXTENSION_NAME) != 0;
         }, &VkExtensionProperties::extensionName
     );
 }

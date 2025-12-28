@@ -2,10 +2,12 @@
 
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <ranges>
 
 #include "engine_component_factory.h"
-#include "../utils/validations.h"
+#include "util/validations.h"
 #include "queue/queue_factory.h"
+#include "util/binary_file_utils.h"
 
 Engine Engine::createEngine() {
     EngineLoader::checkGlfwInit();
@@ -28,18 +30,23 @@ Engine Engine::createEngine() {
     SwapchainSupportDetails swapchainSupportDetails = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
     VkSwapchainKHR swapchain = EngineComponentFactory::createSwapchain(device, surface, swapchainSupportDetails, queueCreateInfos.size() == 1);
 
-    std::vector<VkImage> images = EngineComponentFactory::getSwapchainImages(device, swapchain);
     std::vector<VkImageView> imageViews {};
-
     for (
         VkFormat format = swapchainSupportDetails.getProperSurfaceFormat().format;
-        VkImage image : images
+        VkImage image : EngineComponentFactory::getSwapchainImages(device, swapchain)
     ) {
         VkImageView imageView = EngineComponentFactory::createImageView(device, format, image);
         imageViews.push_back(imageView);
     }
 
-    return { window, instance, device, surface, swapchain, imageViews };
+    ShaderMap shaderModules {};
+    for (BinaryFile& binaryFile : BinaryFileUtils::getAllFiles()) {
+        ShaderType shaderType = Shaders::getShaderType(binaryFile.fileName);
+        VkShaderModule shaderModule = EngineComponentFactory::createShaderModule(device, binaryFile);
+        shaderModules[shaderType] = shaderModule;
+    }
+
+    return { window, instance, device, surface, swapchain, imageViews, shaderModules };
 }
 
 
@@ -77,9 +84,11 @@ void EngineLoader::checkVkExtensions() {
     std::cout << "Vulkan extensions supported: " << extensionCount << std::endl;
 }
 
-
 Engine::~Engine() {
-    for (auto imageView : m_imageViews) {
+    for (const auto& shaderModule: m_shaderModules | std::views::values) {
+        vkDestroyShaderModule(m_device, shaderModule, nullptr);
+    }
+    for (auto& imageView : m_imageViews) {
         vkDestroyImageView(m_device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);

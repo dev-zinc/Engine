@@ -3,8 +3,6 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 
-#include "classic_string.h"
-
 namespace Validations {
 
 #if defined(NDEBUG)
@@ -17,5 +15,5 @@ namespace Validations {
         "VK_LAYER_KHRONOS_validation"
     };
 
-    bool isAvailable(const std::vector<VkLayerProperties>& availableLayers, ClassicString layerName);
+    bool isAvailable(const std::vector<VkLayerProperties>& availableLayers, const char* layerName);
 }
