@@ -1,7 +1,7 @@
 #include "engine_component_factory.h"
 
-#include <set>
-
+#include "engine.h"
+#include "pipeline/graphics_pipeline_supports.h"
 #include "util/platform.h"
 #include "util/validations.h"
 #include "queue/queue_factory.h"
@@ -84,8 +84,8 @@ VkInstance EngineComponentFactory::createVkInstance() {
 
 VkSwapchainCreateInfoKHR EngineComponentFactory::createSwapchainCreateInfo(
     VkSurfaceKHR surface,
-    SwapchainSupportDetails& swapchainInfo,
-    bool useSameQueueFamily
+    const SwapchainSupportDetails& swapchainInfo,
+    const bool useSameQueueFamily
 ) {
     VkSwapchainCreateInfoKHR swapchainCreateInfo{};
     VkSurfaceCapabilitiesKHR capabilities = swapchainInfo.surfaceCapabilities;
@@ -205,7 +205,6 @@ VkPhysicalDevice EngineComponentFactory::getProperPhysicalDevice(std::vector<VkP
             continue;
         }
 
-
         if (
             QueueFamilyIndices queueFamilyIndices = QueueFactory::getQueueFamilyIndices(physicalDevice, surface);
             queueFamilyIndices.isComplete()
@@ -291,10 +290,12 @@ VkShaderModule EngineComponentFactory::createShaderModule(VkDevice device, const
     return shaderModule;
 }
 
-VkRenderPassCreateInfo EngineComponentFactory::createRenderPassCreateInfo(VkFormat format, const VkSubpassDescription& subpassDescription) {
+VkRenderPassCreateInfo EngineComponentFactory::createRenderPassCreateInfo(
+    const VkSubpassDependency& subpassDependency,
+    const VkAttachmentDescription& attachmentDescription,
+    const VkSubpassDescription& subpassDescription
+) {
     VkRenderPassCreateInfo renderPassCreateInfo {};
-    VkSubpassDependency subpassDependency = RenderPassSupports::createSubpassDependency();
-    VkAttachmentDescription attachmentDescription = RenderPassSupports::createAttachmentDescription(format);
 
     renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.pDependencies = &subpassDependency;
@@ -309,13 +310,189 @@ VkRenderPassCreateInfo EngineComponentFactory::createRenderPassCreateInfo(VkForm
 VkRenderPass EngineComponentFactory::createRenderPass(VkDevice device, VkFormat format) {
     VkRenderPass renderPass;
 
+    VkSubpassDependency subpassDependency = RenderPassSupports::createSubpassDependency();
+    VkAttachmentDescription attachmentDescription = RenderPassSupports::createAttachmentDescription(format);
+
     VkAttachmentReference attachmentReference = RenderPassSupports::createAttachmentReference();
     VkSubpassDescription subpassDescription = RenderPassSupports::createSubpassDescription(&attachmentReference);
 
-    VkRenderPassCreateInfo renderPassCreateInfo = createRenderPassCreateInfo(format, subpassDescription);
+    VkRenderPassCreateInfo renderPassCreateInfo = createRenderPassCreateInfo(subpassDependency, attachmentDescription, subpassDescription);
 
     if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
     return renderPass;
+}
+
+VkPipelineLayout EngineComponentFactory::createPipelineLayout(VkDevice device) {
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = GraphicsPipelineSupports::createPipelineLayoutCreateInfo();
+    VkPipelineLayout pipelineLayout;
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+    return pipelineLayout;
+}
+
+VkViewport EngineComponentFactory::createViewport(const VkExtent2D& swapchainExtent) {
+    VkViewport viewport {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(swapchainExtent.width);
+    viewport.height = static_cast<float>(swapchainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    return viewport;
+}
+
+std::vector<VkPipelineShaderStageCreateInfo> EngineComponentFactory::createShaderStages(const ShaderMap& shaderModules) {
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages {};
+
+    shaderStages.reserve(shaderModules.size());
+
+    for (auto& [shaderType, shaderModule] : shaderModules) {
+        shaderStages.push_back(GraphicsPipelineSupports::createPipelineShaderStageCreateInfo(
+            static_cast<VkShaderStageFlagBits>(shaderType),
+            shaderModule
+        ));
+    }
+    return shaderStages;
+}
+
+VkGraphicsPipelineCreateInfo EngineComponentFactory::createGraphicsPipelineCreateInfo(
+    const std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
+    const VkPipelineViewportStateCreateInfo& viewportState,
+    const VkPipelineVertexInputStateCreateInfo& vertexInputState,
+    const VkPipelineInputAssemblyStateCreateInfo& inputAssemblyState,
+    const VkPipelineRasterizationStateCreateInfo& rasterizationState,
+    const VkPipelineMultisampleStateCreateInfo& multisampleState,
+    const VkPipelineColorBlendStateCreateInfo& colorBlendState,
+    VkPipelineLayout pipelineLayout,
+    VkRenderPass renderPass
+) {
+    VkGraphicsPipelineCreateInfo pipelineInfo {};
+
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages.data();
+    pipelineInfo.pVertexInputState = &vertexInputState;
+    pipelineInfo.pInputAssemblyState = &inputAssemblyState;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizationState;
+    pipelineInfo.pMultisampleState = &multisampleState;
+    pipelineInfo.pColorBlendState = &colorBlendState;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
+    return pipelineInfo;
+}
+
+VkPipeline EngineComponentFactory::createGraphicsPipeline(
+    VkDevice device,
+    VkRenderPass renderPass,
+    VkPipelineLayout pipelineLayout,
+    const ShaderMap& shaderModules,
+    const VkExtent2D& swapchainExtent
+) {
+    auto vertexInputState = GraphicsPipelineSupports::createPipelineVertexInputStateCreateInfo();
+    auto inputAssemblyState = GraphicsPipelineSupports::createPipelineInputAssemblyStateCreateInfo();
+    auto rasterizationState = GraphicsPipelineSupports::createPipelineRasterizationStateCreateInfo();
+    auto multisampleState = GraphicsPipelineSupports::createPipelineMultisampleStateCreateInfo();
+    auto colorBlendAttachment = GraphicsPipelineSupports::createPipelineColorBlendAttachmentState();
+    auto colorBlendState = GraphicsPipelineSupports::createPipelineColorBlendStateCreateInfo(&colorBlendAttachment);
+
+    VkViewport viewport = createViewport(swapchainExtent);
+    VkRect2D scissor { {0, 0}, swapchainExtent };
+
+    auto viewportState = GraphicsPipelineSupports::createPipelineViewportStateCreateInfo(&viewport, &scissor);
+    auto shaderStages = createShaderStages(shaderModules);
+
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = createGraphicsPipelineCreateInfo(
+        shaderStages,
+        viewportState,
+        vertexInputState,
+        inputAssemblyState,
+        rasterizationState,
+        multisampleState,
+        colorBlendState,
+        pipelineLayout,
+        renderPass
+    );
+
+    constexpr uint32_t createInfoCount = 1;
+    VkPipeline graphicsPipeline;
+
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, createInfoCount, &pipelineCreateInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+    }
+    return graphicsPipeline;
+}
+
+VkFramebufferCreateInfo EngineComponentFactory::createFramebufferCreateInfo(
+    VkRenderPass renderPass,
+    const std::vector<VkImageView> &imageViews,
+    const VkExtent2D& swapchainExtent
+) {
+    VkFramebufferCreateInfo framebufferCreateInfo {};
+    framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferCreateInfo.renderPass = renderPass;
+    framebufferCreateInfo.attachmentCount = imageViews.size();
+    framebufferCreateInfo.pAttachments = imageViews.data();
+    framebufferCreateInfo.width = swapchainExtent.width;
+    framebufferCreateInfo.height = swapchainExtent.height;
+    framebufferCreateInfo.layers = 1;
+    return framebufferCreateInfo;
+}
+
+VkFramebuffer EngineComponentFactory::createFramebuffer(
+    VkDevice device,
+    VkRenderPass renderPass,
+    const std::vector<VkImageView> &imageViews,
+    const VkExtent2D& swapchainExtent
+) {
+    VkFramebufferCreateInfo framebufferCreateInfo = createFramebufferCreateInfo(renderPass, imageViews, swapchainExtent);
+    VkFramebuffer framebuffer;
+
+    if (vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create framebuffer!");
+    }
+    return framebuffer;
+}
+
+VkCommandPoolCreateInfo EngineComponentFactory::createCommandPoolCreateInfo(const uint32_t queueFamilyIndex) {
+    VkCommandPoolCreateInfo commandPoolCreateInfo {};
+    commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    commandPoolCreateInfo.flags |= VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+    return commandPoolCreateInfo;
+}
+
+VkCommandPool EngineComponentFactory::createCommandPool(VkDevice device, const uint32_t queueFamilyIndex) {
+    VkCommandPoolCreateInfo commandPoolCreateInfo = createCommandPoolCreateInfo(queueFamilyIndex);
+    VkCommandPool commandPool;
+
+    if (vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool!");
+    }
+    return commandPool;
+}
+
+VkCommandBufferAllocateInfo EngineComponentFactory::createCommandBufferAllocateInfo(VkCommandPool commandPool) {
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo {};
+    commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocateInfo.commandPool = commandPool;
+    commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocateInfo.commandBufferCount = 1;
+    return commandBufferAllocateInfo;
+}
+
+VkCommandBuffer EngineComponentFactory::createCommandBuffer(VkDevice device, VkCommandPool commandPool) {
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo = createCommandBufferAllocateInfo(commandPool);
+
+    VkCommandBuffer commandBuffer;
+
+    vkCmdBeginRenderPass(commandBuffer, );
+    vkCmdBindPipeline();
+    vkCmdDraw();
+    vkCmdEndRenderPass();
 }

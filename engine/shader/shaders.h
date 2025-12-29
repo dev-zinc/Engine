@@ -2,17 +2,18 @@
 
 #include <iostream>
 #include <string>
+#include "vulkan/vulkan_core.h"
 
 enum ShaderType {
-    VERTEX_SHADER,
-    FRAGMENT_SHADER,
-    GEOMETRY_SHADER,
+    VERTEX_SHADER = VK_SHADER_STAGE_VERTEX_BIT,
+    FRAGMENT_SHADER = VK_SHADER_STAGE_FRAGMENT_BIT,
+    GEOMETRY_SHADER = VK_SHADER_STAGE_GEOMETRY_BIT,
 };
 
 namespace Shaders {
     constexpr auto SHADER_DIR { "./shaders" };
 
-    inline ShaderType getShaderType(const std::string fileName) {
+    inline ShaderType getShaderType(const std::string& fileName) {
         if (fileName.find(".vert") != std::string::npos) {
             return VERTEX_SHADER;
         }

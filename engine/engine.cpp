@@ -22,6 +22,7 @@ Engine Engine::createEngine() {
 
     std::vector physicalDevices = EngineComponentFactory::getPhysicalDevices(instance);
     VkPhysicalDevice physicalDevice = EngineComponentFactory::getProperPhysicalDevice(physicalDevices, surface);
+    QueueFamilyIndices queueFamilyIndices = QueueFactory::getQueueFamilyIndices(physicalDevice, surface);
 
     constexpr float queuePriority = 1.0f;
     std::vector queueCreateInfos = QueueFactory::createQueueCreateInfos(physicalDevice, surface, &queuePriority);
@@ -29,24 +30,22 @@ Engine Engine::createEngine() {
 
     SwapchainSupportDetails swapchainSupportDetails = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
     VkSwapchainKHR swapchain = EngineComponentFactory::createSwapchain(device, surface, swapchainSupportDetails, queueCreateInfos.size() == 1);
-    VkFormat format = swapchainSupportDetails.getProperSurfaceFormat().format;
+    VkSurfaceFormatKHR surfaceFormat = swapchainSupportDetails.getProperSurfaceFormat();
+    VkFormat swapchainImageFormat = surfaceFormat.format;
 
-    std::vector<VkImageView> imageViews {};
-    for (VkImage image : EngineComponentFactory::getSwapchainImages(device, swapchain)) {
-        VkImageView imageView = EngineComponentFactory::createImageView(device, format, image);
-        imageViews.push_back(imageView);
-    }
+    std::vector<VkImageView> imageViews = EngineLoader::getImageViews(device, swapchain, swapchainImageFormat);
+    ShaderMap shaderModules = EngineLoader::getShaderModules(device);
 
-    ShaderMap shaderModules {};
-    for (BinaryFile& binaryFile : BinaryFileUtils::getAllFiles()) {
-        ShaderType shaderType = Shaders::getShaderType(binaryFile.fileName);
-        VkShaderModule shaderModule = EngineComponentFactory::createShaderModule(device, binaryFile);
-        shaderModules[shaderType] = shaderModule;
-    }
+    VkRenderPass renderPass = EngineComponentFactory::createRenderPass(device, swapchainImageFormat);
+    VkPipelineLayout pipelineLayout = EngineComponentFactory::createPipelineLayout(device);
+    VkExtent2D swapchainExtent = swapchainSupportDetails.getProperExtent();
 
-    VkRenderPass renderPass = EngineComponentFactory::createRenderPass(device, format);
+    VkPipeline graphicsPipeline = EngineComponentFactory::createGraphicsPipeline(device, renderPass, pipelineLayout, shaderModules, swapchainExtent);
 
-    return { window, instance, device, surface, swapchain, imageViews, shaderModules, renderPass };
+    VkFramebuffer framebuffer = EngineComponentFactory::createFramebuffer(device, renderPass, imageViews, swapchainExtent);
+    VkCommandPool commandPool = EngineComponentFactory::createCommandPool(device, queueFamilyIndices.graphicsFamily.value());
+
+    return { window, instance, device, surface, swapchain, imageViews, shaderModules, renderPass, pipelineLayout, graphicsPipeline };
 }
 
 
@@ -64,7 +63,7 @@ void EngineLoader::checkValidationLayerSupport() {
         std::vector<VkLayerProperties> availableLayers(layerCount);
         vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-        bool isAvailable = std::ranges::all_of(
+        const bool isAvailable = std::ranges::all_of(
             Validations::LAYERS,
             [&](const char* layerName) {
                 return Validations::isAvailable(availableLayers, layerName);
@@ -84,17 +83,50 @@ void EngineLoader::checkVkExtensions() {
     std::cout << "Vulkan extensions supported: " << extensionCount << std::endl;
 }
 
+std::vector<VkImageView> EngineLoader::getImageViews(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchainImageFormat) {
+    std::vector<VkImageView> imageViews {};
+
+    for (VkImage image : EngineComponentFactory::getSwapchainImages(device, swapchain)) {
+        VkImageView imageView = EngineComponentFactory::createImageView(device, swapchainImageFormat, image);
+        imageViews.push_back(imageView);
+    }
+    return imageViews;
+}
+
+ShaderMap EngineLoader::getShaderModules(VkDevice device) {
+    ShaderMap shaderModules {};
+
+    for (BinaryFile& binaryFile : BinaryFileUtils::getAllFiles()) {
+        ShaderType shaderType = Shaders::getShaderType(binaryFile.fileName);
+        VkShaderModule shaderModule = EngineComponentFactory::createShaderModule(device, binaryFile);
+        shaderModules[shaderType] = shaderModule;
+    }
+    return shaderModules;
+}
+
 Engine::~Engine() {
+    // Destroy Pipeline
+    vkDestroyPipeline(m_device, m_pipeline, nullptr);
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+
+    // Destroy Shader
     for (const auto& shaderModule: m_shaderModules | std::views::values) {
         vkDestroyShaderModule(m_device, shaderModule, nullptr);
     }
+
+    // Destroy Swapchain
     for (auto& imageView : m_imageViews) {
         vkDestroyImageView(m_device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+
+    // Destroy Device, Surface, Instance
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyInstance(m_instance, nullptr);
+
+    // Destroy Window
     glfwDestroyWindow(m_window);
     glfwTerminate();
 }

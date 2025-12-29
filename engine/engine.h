@@ -16,6 +16,10 @@ namespace EngineLoader {
     void checkValidationLayerSupport();
 
     void checkVkExtensions();
+
+    std::vector<VkImageView> getImageViews(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchainImageFormat);
+
+    ShaderMap getShaderModules(VkDevice device);
 }
 
 class Engine {
@@ -60,7 +64,9 @@ public:
         VkSwapchainKHR swapchain,
         std::vector<VkImageView> imageViews,
         ShaderMap shaderModules,
-        VkRenderPass renderPass
+        VkRenderPass renderPass,
+        VkPipelineLayout pipelineLayout,
+        VkPipeline pipeline
     ) {
         m_window = window;
         m_instance = instance;
@@ -70,6 +76,8 @@ public:
         m_imageViews = std::move(imageViews);
         m_shaderModules = std::move(shaderModules);
         m_renderPass = renderPass;
+        m_pipelineLayout = pipelineLayout;
+        m_pipeline = pipeline;
     };
 
     ~Engine();
@@ -77,12 +85,14 @@ public:
     void waitEventsUntilExit() const;
 
 private:
-    GLFWwindow* m_window;
-    VkInstance m_instance;
-    VkDevice m_device;
-    VkSurfaceKHR m_surface;
-    VkSwapchainKHR m_swapchain;
-    std::vector<VkImageView> m_imageViews;
-    ShaderMap m_shaderModules;
-    VkRenderPass m_renderPass;
+    GLFWwindow*                 m_window;
+    VkInstance                  m_instance;
+    VkDevice                    m_device;
+    VkSurfaceKHR                m_surface;
+    VkSwapchainKHR              m_swapchain;
+    std::vector<VkImageView>    m_imageViews;
+    ShaderMap                   m_shaderModules;
+    VkRenderPass                m_renderPass;
+    VkPipelineLayout            m_pipelineLayout;
+    VkPipeline                  m_pipeline;
 };

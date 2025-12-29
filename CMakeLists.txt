@@ -23,6 +23,8 @@ add_executable(Engine main.cpp
         engine/shader/shaders.h
         engine/shader/render_pass.cpp
         engine/shader/render_pass_supports.h
+        engine/pipeline/graphics_pipeline_supports.cpp
+        engine/pipeline/graphics_pipeline_supports.h
 )
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)
