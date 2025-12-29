@@ -1,0 +1,42 @@
+#include "render_pass_supports.h"
+
+
+VkAttachmentDescription RenderPassSupports::createAttachmentDescription(VkFormat format) {
+    VkAttachmentDescription attachmentDescription {};
+    attachmentDescription.format = format;
+    // No Multisampling
+    attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    return attachmentDescription;
+}
+
+VkAttachmentReference RenderPassSupports::createAttachmentReference() {
+    VkAttachmentReference attachmentReference {};
+    attachmentReference.attachment = 0;
+    attachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    return attachmentReference;
+}
+
+VkSubpassDescription RenderPassSupports::createSubpassDescription(const VkAttachmentReference* attachmentReference) {
+    VkSubpassDescription subpassDescription {};
+    subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescription.colorAttachmentCount = 1;
+    subpassDescription.pColorAttachments = attachmentReference;
+    return subpassDescription;
+}
+
+VkSubpassDependency RenderPassSupports::createSubpassDependency() {
+    VkSubpassDependency subpassDependency {};
+    subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpassDependency.dstSubpass = 0;
+    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.srcAccessMask = 0;
+    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    return subpassDependency;
+}

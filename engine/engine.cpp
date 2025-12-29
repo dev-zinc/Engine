@@ -29,12 +29,10 @@ Engine Engine::createEngine() {
 
     SwapchainSupportDetails swapchainSupportDetails = SwapchainSupports::getSwapchainSupportDetails(physicalDevice, surface);
     VkSwapchainKHR swapchain = EngineComponentFactory::createSwapchain(device, surface, swapchainSupportDetails, queueCreateInfos.size() == 1);
+    VkFormat format = swapchainSupportDetails.getProperSurfaceFormat().format;
 
     std::vector<VkImageView> imageViews {};
-    for (
-        VkFormat format = swapchainSupportDetails.getProperSurfaceFormat().format;
-        VkImage image : EngineComponentFactory::getSwapchainImages(device, swapchain)
-    ) {
+    for (VkImage image : EngineComponentFactory::getSwapchainImages(device, swapchain)) {
         VkImageView imageView = EngineComponentFactory::createImageView(device, format, image);
         imageViews.push_back(imageView);
     }
@@ -46,7 +44,9 @@ Engine Engine::createEngine() {
         shaderModules[shaderType] = shaderModule;
     }
 
-    return { window, instance, device, surface, swapchain, imageViews, shaderModules };
+    VkRenderPass renderPass = EngineComponentFactory::createRenderPass(device, format);
+
+    return { window, instance, device, surface, swapchain, imageViews, shaderModules, renderPass };
 }
 
 

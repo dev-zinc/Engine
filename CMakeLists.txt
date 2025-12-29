@@ -21,6 +21,8 @@ add_executable(Engine main.cpp
         engine/util/binary_file_utils.cpp
         engine/util/binary_file_utils.h
         engine/shader/shaders.h
+        engine/shader/render_pass.cpp
+        engine/shader/render_pass_supports.h
 )
 
 target_compile_definitions(Engine PRIVATE GLFW_INCLUDE_VULKAN)

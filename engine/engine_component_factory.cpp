@@ -5,6 +5,7 @@
 #include "util/platform.h"
 #include "util/validations.h"
 #include "queue/queue_factory.h"
+#include "shader/render_pass_supports.h"
 #include "shader/shaders.h"
 #include "swapchain/swapchain_supports.h"
 #include "util/binary_file_utils.h"
@@ -288,4 +289,33 @@ VkShaderModule EngineComponentFactory::createShaderModule(VkDevice device, const
         throw std::runtime_error("failed to create shader module!");
     }
     return shaderModule;
+}
+
+VkRenderPassCreateInfo EngineComponentFactory::createRenderPassCreateInfo(VkFormat format, const VkSubpassDescription& subpassDescription) {
+    VkRenderPassCreateInfo renderPassCreateInfo {};
+    VkSubpassDependency subpassDependency = RenderPassSupports::createSubpassDependency();
+    VkAttachmentDescription attachmentDescription = RenderPassSupports::createAttachmentDescription(format);
+
+    renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.pDependencies = &subpassDependency;
+    renderPassCreateInfo.dependencyCount = 1;
+    renderPassCreateInfo.pAttachments = &attachmentDescription;
+    renderPassCreateInfo.attachmentCount = 1;
+    renderPassCreateInfo.pSubpasses = &subpassDescription;
+    renderPassCreateInfo.subpassCount = 1;
+    return renderPassCreateInfo;
+}
+
+VkRenderPass EngineComponentFactory::createRenderPass(VkDevice device, VkFormat format) {
+    VkRenderPass renderPass;
+
+    VkAttachmentReference attachmentReference = RenderPassSupports::createAttachmentReference();
+    VkSubpassDescription subpassDescription = RenderPassSupports::createSubpassDescription(&attachmentReference);
+
+    VkRenderPassCreateInfo renderPassCreateInfo = createRenderPassCreateInfo(format, subpassDescription);
+
+    if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+    return renderPass;
 }

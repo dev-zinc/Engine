@@ -59,7 +59,8 @@ public:
         VkSurfaceKHR surface,
         VkSwapchainKHR swapchain,
         std::vector<VkImageView> imageViews,
-        ShaderMap shaderModules
+        ShaderMap shaderModules,
+        VkRenderPass renderPass
     ) {
         m_window = window;
         m_instance = instance;
@@ -68,6 +69,7 @@ public:
         m_swapchain = swapchain;
         m_imageViews = std::move(imageViews);
         m_shaderModules = std::move(shaderModules);
+        m_renderPass = renderPass;
     };
 
     ~Engine();
@@ -82,4 +84,5 @@ private:
     VkSwapchainKHR m_swapchain;
     std::vector<VkImageView> m_imageViews;
     ShaderMap m_shaderModules;
+    VkRenderPass m_renderPass;
 };
